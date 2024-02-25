@@ -1,0 +1,939 @@
+using System;
+using System.Drawing;
+using System.Collections;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.Data;
+using GameTools;
+
+namespace SpaceDefender
+{
+	/// <summary>
+	/// Summary description for MainForm.
+	/// </summary>
+	public class MainForm : System.Windows.Forms.Form
+	{
+		// Global variables can be used by all Methods
+		int targetX;
+		int targetY;
+		int[] targetingCounter;
+		int[] wall;
+		int countWall;
+		int level;
+		int lives;
+		int score;
+		int flashCount;
+
+		String testString;
+
+		Image saucer = Image.FromFile("images\\saucer.png");
+
+		bool gameOver;
+		bool roundComplete;
+		bool roundStarted;
+		bool paused;
+
+		// game's random number generator
+		Random rand = new Random();
+
+		// instantiate all objects needed for the game
+		HeroShip ship = new HeroShip(0, 455, 50, 50, Image.FromFile("images\\HeroShip.png"));
+		Star[] star = new Star[35];
+		EnemyShip[] enemy = new EnemyShip[2];
+		PowerUp[] powerUp = new PowerUp[2];
+		
+		private System.Windows.Forms.Timer FrameChange_Timer;
+		private System.Windows.Forms.MainMenu mainMenu;
+		private System.Windows.Forms.MenuItem mFile;
+		private System.Windows.Forms.MenuItem mNewGame;
+		private System.Windows.Forms.MenuItem mExit;
+		private System.Windows.Forms.MenuItem mSeperator1;
+		private System.Windows.Forms.Timer Target_Timer;
+		private System.Windows.Forms.MenuItem mOptions;
+		private System.Windows.Forms.MenuItem mPauseOffScreen;
+		private System.Windows.Forms.Timer PlayerHit_Timer;
+		private System.ComponentModel.IContainer components;
+
+		public MainForm()
+		{
+			InitializeComponent();
+			
+			//Enable double buffering
+			this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.DoubleBuffer,true);			
+		}	
+
+		/// <summary>
+		/// Clean up any resources being used.
+		/// </summary>
+		protected override void Dispose( bool disposing )
+		{
+			if( disposing )
+			{
+				if (components != null) 
+				{
+					components.Dispose();
+				}
+			}
+			base.Dispose( disposing );
+		}
+
+		#region Windows Form Designer generated code
+		/// <summary>
+		/// Required method for Designer support - do not modify
+		/// the contents of this method with the code editor.
+		/// </summary>
+		private void InitializeComponent()
+		{
+			this.components = new System.ComponentModel.Container();
+			System.Resources.ResourceManager resources = new System.Resources.ResourceManager(typeof(MainForm));
+			this.FrameChange_Timer = new System.Windows.Forms.Timer(this.components);
+			this.mainMenu = new System.Windows.Forms.MainMenu();
+			this.mFile = new System.Windows.Forms.MenuItem();
+			this.mNewGame = new System.Windows.Forms.MenuItem();
+			this.mSeperator1 = new System.Windows.Forms.MenuItem();
+			this.mExit = new System.Windows.Forms.MenuItem();
+			this.mOptions = new System.Windows.Forms.MenuItem();
+			this.mPauseOffScreen = new System.Windows.Forms.MenuItem();
+			this.Target_Timer = new System.Windows.Forms.Timer(this.components);
+			this.PlayerHit_Timer = new System.Windows.Forms.Timer(this.components);
+			// 
+			// FrameChange_Timer
+			// 
+			this.FrameChange_Timer.Enabled = true;
+			this.FrameChange_Timer.Interval = 30;
+			this.FrameChange_Timer.Tick += new System.EventHandler(this.FrameChange_Timer_Tick);
+			// 
+			// mainMenu
+			// 
+			this.mainMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+																					 this.mFile,
+																					 this.mOptions});
+			// 
+			// mFile
+			// 
+			this.mFile.Index = 0;
+			this.mFile.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+																				  this.mNewGame,
+																				  this.mSeperator1,
+																				  this.mExit});
+			this.mFile.Text = "File";
+			// 
+			// mNewGame
+			// 
+			this.mNewGame.Index = 0;
+			this.mNewGame.Text = "New Game";
+			this.mNewGame.Click += new System.EventHandler(this.mNewGame_Click);
+			// 
+			// mSeperator1
+			// 
+			this.mSeperator1.Index = 1;
+			this.mSeperator1.Text = "-";
+			// 
+			// mExit
+			// 
+			this.mExit.Index = 2;
+			this.mExit.Text = "Exit";
+			this.mExit.Click += new System.EventHandler(this.mExit_Click);
+			// 
+			// mOptions
+			// 
+			this.mOptions.Index = 1;
+			this.mOptions.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+																					 this.mPauseOffScreen});
+			this.mOptions.Text = "Options";
+			// 
+			// mPauseOffScreen
+			// 
+			this.mPauseOffScreen.Checked = true;
+			this.mPauseOffScreen.Index = 0;
+			this.mPauseOffScreen.Text = "PauseOffScreen";
+			this.mPauseOffScreen.Click += new System.EventHandler(this.mPauseOffScreen_Click);
+			// 
+			// Target_Timer
+			// 
+			this.Target_Timer.Enabled = true;
+			this.Target_Timer.Interval = 30;
+			this.Target_Timer.Tick += new System.EventHandler(this.Target_Timer_Tick);
+			// 
+			// PlayerHit_Timer
+			// 
+			this.PlayerHit_Timer.Interval = 50;
+			this.PlayerHit_Timer.Tick += new System.EventHandler(this.PlayerHit_Timer_Tick);
+			// 
+			// MainForm
+			// 
+			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
+			this.BackColor = System.Drawing.Color.Black;
+			this.ClientSize = new System.Drawing.Size(590, 564);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.Fixed3D;
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+			this.MaximizeBox = false;
+			this.MaximumSize = new System.Drawing.Size(600, 600);
+			this.Menu = this.mainMenu;
+			this.MinimumSize = new System.Drawing.Size(600, 600);
+			this.Name = "MainForm";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+			this.Text = "Space Defender ";
+			this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
+			this.Load += new System.EventHandler(this.MainForm_Load);
+			this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
+			this.MouseLeave += new System.EventHandler(this.MainForm_MouseLeave);
+
+		}
+		#endregion
+
+		/// <summary>
+		/// The main entry point for the application.
+		/// </summary>
+		[STAThread]
+		static void Main() 
+		{
+			Application.Run(new MainForm());
+		}
+
+		private void MainForm_Load(object sender, System.EventArgs e)
+		{
+			// initialize variables for targeting bullseye
+			targetingCounter = new int [2];
+			targetingCounter[0] = 10;
+			targetingCounter[1] = 5;
+
+			StartAgain();
+			testString = "";
+		}
+
+		protected override void OnPaint(PaintEventArgs e)
+		{
+			Graphics g = e.Graphics;
+
+			// Draw Stars
+			for (int count = 0; count < star.Length; count++)
+				star[count].Draw(g);
+
+			// Draw Wall
+			for (int count= 0; count < wall.Length; count++)
+				g.DrawLine(new Pen(Color.Brown, 1), count, wall[count], count, this.ClientSize.Height);
+
+			// Draw Lives
+			for (int count = 0; count < lives; count ++)
+				g.DrawImage(ship.getImage(), 0 + 10 * count, 10, 10, 10);
+
+			if (roundStarted)
+			{
+				// Draw Lasers
+				ship.drawLasers(g);
+				ship.wingman[0].drawLasers(g);
+				ship.wingman[1].drawLasers(g);
+
+				// Draw Ship
+				if (ship.isVisible())
+				{
+					ship.Draw(g);
+				}
+				
+				for (int WingmanIndex = 0; WingmanIndex < ship.wingman.Length; WingmanIndex ++)
+				{
+					if (ship.wingman[WingmanIndex].isVisible())
+					{
+						for (int count = ship.wingman[WingmanIndex].getWidth()/4 + + targetingCounter[0]%5; count > 0; count--)
+						{
+							int trans = 255/count;
+							g.DrawEllipse(new Pen(Color.FromArgb(trans, 240, 220, 85), 2), ship.wingman[WingmanIndex].getMiddleX() - count/2, ship.wingman[WingmanIndex].getBottom() - count/2, count, count);
+
+						}
+						for (int count = ship.wingman[WingmanIndex].getWidth()/3 + + targetingCounter[1]%5; count > 0; count--)
+						{
+							int trans = 255/count;
+							g.DrawEllipse(new Pen(Color.FromArgb(trans, 255, 150, 0), 2), ship.wingman[WingmanIndex].getMiddleX() - count/2, ship.wingman[WingmanIndex].getBottom()- count/2, count, count);
+
+						}
+
+						g.DrawImage(ship.wingman[WingmanIndex].getImage(), ship.wingman[WingmanIndex].getLeft(), ship.wingman[WingmanIndex].getTop(), ship.wingman[WingmanIndex].getWidth(), ship.wingman[WingmanIndex].getHeight());
+					}
+
+				}
+
+				//Draw PowerUps
+				for (int PowerUpIndex = 0; PowerUpIndex < powerUp.Length; PowerUpIndex++)
+				{
+					if (powerUp[PowerUpIndex].isVisible())
+					{
+						powerUp[PowerUpIndex].Draw(g);
+						//g.DrawImage(powerUp[PowerUpIndex].getImage(), powerUp[PowerUpIndex].getLeft(),powerUp[PowerUpIndex].getTop(), powerUp[PowerUpIndex].getWidth(), powerUp[PowerUpIndex].getHeight());
+					}
+				} 
+
+				// Draw Enemies
+				for (int count = 0; count < enemy.Length; count++)
+				{
+					enemy[count].drawLasers(g);
+
+					if (enemy[count].isVisible())
+						enemy[count].Draw(g);
+						//g.DrawImage(enemy[count].getImage(), enemy[count].getLeft(), enemy[count].getTop(), enemy[count].getWidth(), enemy[count].getHeight());
+				}
+				
+				/// Top layers
+				// Draw targeting bullseye
+				for (int count = 0; count < targetingCounter.Length; count++)
+					g.DrawEllipse(new Pen(Color.FromArgb(255 - (targetingCounter[count] * 20), 255, 0, 0), 2), targetX - targetingCounter[count], targetY - targetingCounter[count], targetingCounter[count] * 2, targetingCounter[count] * 2);
+				//	Draw target "deadeye"
+				g.FillEllipse(Brushes.Black, targetX-1, targetY -1, 2, 2);
+				
+				String scoreString = Convert.ToString(score);
+				Font scoreFont = new Font("Arial", 14);
+				g.DrawString(scoreString, scoreFont, Brushes.Red, this.ClientSize.Width - (scoreString.Length * (scoreFont.SizeInPoints - 3)) - 12, 12);
+				if (gameOver)
+					g.DrawString("Game Over", new Font("Arial", 24), Brushes.Red, this.ClientSize.Width/2 - (12*9), this.ClientSize.Height/3 - 12);
+			}
+			else
+			{
+				g.DrawString("Level " + level, new Font("Arial", 24), new SolidBrush(Color.FromArgb(105, 255, 255, 255)), this.ClientSize.Width/2 - (12*5 - 2), this.ClientSize.Height/3 - 10);
+				g.DrawString("Level " + level, new Font("Arial", 24), Brushes.White, this.ClientSize.Width/2 - (12*5), this.ClientSize.Height/3 - 12);
+			}
+			if (paused) // if paused, say so
+			{
+				g.FillRectangle(new SolidBrush(Color.FromArgb(65, 255, 0, 0)), 0, 0, this.ClientSize.Width, this.ClientSize.Height);
+				g.DrawString("Pause", new Font("Arial", 24), Brushes.Black, this.ClientSize.Width/2 - (12*5 - 3), this.ClientSize.Height/2 - 9);
+				g.DrawString("Pause", new Font("Arial", 24), Brushes.Red, this.ClientSize.Width/2 - (12*5), this.ClientSize.Height/2 - 12);
+			}
+
+			g.DrawString(testString, new Font("Arial", 24), Brushes.White, 0, 0);
+		}
+
+		private void FrameChange_Timer_Tick(object sender, System.EventArgs e)
+		{
+			testString = "";
+
+
+
+			// Before round starts, draw "loading animation"
+			if (!roundStarted)
+			{
+				makeWall(15);
+			}
+            
+			else if (!roundComplete)
+			{
+				// Twinkle Stars
+				AnimateStars();
+
+				// Animate Lasers
+				ship.AnimateLasersUp(0);
+				for (int count = 0; count < ship.wingman.Length; count++)
+					ship.wingman[count].AnimateLasersUp(0);
+				for (int count = 0; count < enemy.Length; count++)
+				{
+					enemy[count].AnimateLasersDown(this.ClientSize.Height);
+				}				
+
+
+				// Animate Power-Ups
+				for (int count = 0; count < powerUp.Length; count++)
+				{
+					if (powerUp[count].isActive())
+						powerUp[count].Animate();
+					if (powerUp[count].getTop() > this.Height)
+						powerUp[count].setActive(false);
+				}
+
+				// Animate Wingmen
+				for (int count = 0; count < ship.wingman.Length; count ++)
+				{
+					if (ship.wingman[count].isActive() && ship.wingman[count].getTop() - 10 > ship.getMiddleY() - 10)
+						ship.wingman[count].setTop(ship.wingman[count].getTop() - 10);
+					else if (ship.wingman[count].isActive() && ship.wingman[count].getTop() != ship.getMiddleY() - 10)
+						ship.wingman[count].setTop(ship.getMiddleY() - 10);
+				}
+
+				// Check for Collisions
+				DetectCollisions();
+				
+				// enemy tries to fire weapons and change direction
+				for (int count = 0; count < enemy.Length; count++)
+				{
+					enemy[count].setLaserDelay(enemy[count].getLaserDelay() - 1);
+					if (enemy[count].getLaserDelay() <= 0)
+					{
+						enemy[count].tryToFire();
+						enemy[count].setLaserDelay(rand.Next(30, 60));
+					}
+					
+					enemy[count].Animate();
+
+					if (enemy[count].getLeft()<=0 && enemy[count].isActive())
+					{ 
+						for (int loop = 0; loop < enemy.Length; loop++)
+						{
+							enemy[loop].directionChange("right");
+							enemy[loop].setTop(enemy[loop].getTop()+10);
+						}
+					}
+					else if (enemy[count].getRight()>=this.ClientSize.Width && enemy[count].isActive())
+					{
+						for (int loop = 0; loop < enemy.Length; loop++)
+						{
+							enemy[loop].directionChange("left");
+							enemy[loop].setTop(enemy[loop].getTop()+10);
+						}
+					}
+				} 
+
+				// wingmen try to fire weapons
+				for (int count = 0; count < ship.wingman.Length; count ++)
+				{
+					if (ship.wingman[count].isActive() && !roundComplete)
+					{
+						ship.wingman[count].setLaserDelay(ship.wingman[count].getLaserDelay() - 1);
+						if (ship.wingman[count].getLaserDelay() <= 0)
+						{
+							ship.wingman[count].tryToFire();
+							ship.wingman[count].setLaserDelay(15);
+						}
+					}
+				}
+
+				TestroundComplete();
+
+
+			} // end else if (!roundComplete)
+			else if (roundComplete & !gameOver)
+			{
+				LevelEndAnimation();
+			}
+				Invalidate();			
+		}
+		private void StartAgain()
+		{
+			this.Cursor = new Cursor("images\\Blank.cur");
+			level = 0;
+			lives = 3;
+			paused = false;
+			FrameChange_Timer.Enabled = true;
+			score = 0;
+			gameOver = false;
+			ship.setActive(true);
+			ship.setVisible(true);
+			ship.wingman[0].setActive(false);
+			ship.wingman[0].setVisible(false);
+			ship.wingman[1].setActive(false);
+			ship.wingman[1].setVisible(false);
+			flashCount = 0;
+
+			StartRound();
+
+			
+		}
+
+		private void StartRound ()
+		{
+			roundStarted = false;
+			roundComplete = false;
+			level++;
+
+
+			// make wall
+			wall = new int [this.ClientSize.Width];
+			for (int count = 0; count < wall.Length; count++)
+				wall[count] = this.ClientSize.Height;
+			countWall = 0;
+
+			// make stars
+			for (int count = 0; count < star.Length; count++)
+			{
+				makeStar(count);
+			}
+
+			// make enemies
+
+
+				for (int countShips = 0; countShips < enemy.Length ; countShips++)
+				{
+					int column = countShips %10;
+					int row = countShips / 10;
+					enemy[countShips] = new EnemyShip(22 + 50*column, 32 + 50*row, 50, 25, saucer, true, 50, rand.Next(30,60));
+
+					/*
+				if (level%2 == 1)
+						enemy[countShips] = new EnemyShip(this.ClientSize.Width/2 - 52 * countShips, 52, 50, 25, Image.FromFile("images\\saucer.png"), true, 50, rand.Next(30, 60));
+				else
+					enemy[countShips] = new EnemyShip(this.ClientSize.Width/2 - 52 * countShips, 52, 50, 50, Image.FromFile("images\\triangleShip.png"), true, 50, rand.Next(30, 60));
+				
+					*/
+				enemy[countShips].directionChange("right");
+
+					
+					for (int countLasers = 0; countLasers < enemy[countShips].laser.Length; countLasers++)
+					{
+						enemy[countShips].laser[countLasers].setSpeed(6 + 2*((level-1)/3));
+						enemy[countShips].laser[countLasers].setActive(false);
+						enemy[countShips].laser[countLasers].setTop(enemy[countShips].getTop());
+					}
+
+					enemy[countShips].setHitPoints(level);
+				}
+
+			// make power-ups.
+			for (int countPowerUps = 0; countPowerUps < powerUp.Length; countPowerUps++)
+			{
+				powerUp[countPowerUps] = new PowerUp(0, 0, 30, 15, Image.FromFile("images\\powerup.png"));
+			}
+
+
+			// reset ship
+			ship.setTop(455);
+			ship.wingman[0].setTop(ship.getMiddleY() - 10);
+			ship.wingman[1].setTop(ship.getMiddleY() - 10);
+			// reset lasers
+			ship.moveLasers(ship.getMiddleX(), ship.getMiddleY());
+			for (int count = 0; count < ship.wingman.Length; count++)
+			{
+				ship.wingman[count].moveLasers(ship.wingman[count].getMiddleX(), ship.wingman[count].getMiddleY());
+			}
+
+		}
+		private void mExit_Click(object sender, System.EventArgs e)
+		{
+			Application.Exit();
+		}
+
+		private void mNewGame_Click(object sender, System.EventArgs e)
+		{
+			StartAgain();
+		}
+
+		private void makeWall (int max)
+		{
+			for (int count = 0; count < max && !roundStarted; count++)
+			{
+				int upOrDown;
+				if (countWall < wall.Length)
+				{
+					if (countWall == 0)
+					{
+						wall[countWall] = this.ClientSize.Height - rand.Next(25, 50);
+					}
+					else 
+					{
+						if (wall[countWall -1] > this.ClientSize.Height - 15)
+							upOrDown = 0;
+						else if (wall[countWall -1] < this.ClientSize.Height - 50)
+							upOrDown = 1;
+						else
+							upOrDown = rand.Next(1, 100);
+
+					
+						switch (upOrDown%3)
+						{
+							case 0:
+								wall[countWall] = wall[countWall - 1] - rand.Next(1, 3);
+								break;
+							case 1:
+								wall[countWall] = wall[countWall - 1] + rand.Next(1, 3);
+								break;
+							default:
+								wall[countWall] = wall[countWall -1];
+								break;
+						}
+					}		
+					countWall++;
+				}
+				else
+					roundStarted = true;
+			}
+		}
+
+		private void MainForm_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
+		{
+			if (!roundComplete)
+			{
+				// center target cursor
+				targetX = e.X;
+				targetY = e.Y;
+
+				// move ship
+				if (e.X + ship.getWidth()/2 >= this.ClientSize.Width)
+				{
+					ship.setLeft(this.ClientSize.Width - ship.getWidth());
+					ship.wingman[0].setLeft(ship.getLeft() - ship.wingman[0].getWidth());
+					ship.wingman[1].setLeft(ship.getRight());
+				}
+				else if (e.X - ship.getWidth()/2 <= 0)
+				{
+					ship.setLeft(0);
+					ship.wingman[0].setLeft(ship.getLeft() - ship.wingman[0].getWidth());
+					ship.wingman[1].setLeft(ship.getRight());
+				}
+				else
+				{
+					ship.setLeft(e.X - ship.getWidth()/2);
+					ship.wingman[0].setLeft(ship.getLeft() - ship.wingman[0].getWidth());
+					ship.wingman[1].setLeft(ship.getRight());
+				}
+			}
+		}
+
+		private void MainForm_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
+		{
+			if (e.Button.Equals(MouseButtons.Left))
+			{
+				if (paused) // if paused, unpause game
+				{
+					FrameChange_Timer.Enabled=true;
+					paused = false;
+				}
+				else // if game not paused
+				{
+			
+					if (roundStarted && !roundComplete) // game is already started (done loading)
+					{
+						ship.tryToFire();
+					}
+					else  // if game is still loading
+						makeWall(this.ClientSize.Width); // generate rest of the wall
+				}
+			}
+		}
+
+		private void MainForm_MouseLeave(object sender, System.EventArgs e)
+		{
+			if (mPauseOffScreen.Checked)
+			{
+				FrameChange_Timer.Enabled = false;
+				paused = true;
+				Invalidate();
+			}
+		}
+
+		private void AnimateStars ()
+		{
+			for (int count = 0; count < star.Length; count++)
+			{
+				star[count].Animate(rand.Next(20,100));
+				// relocate to top of screen
+				star[count].setY(star[count].getY() + star[count].getSpeed());
+				if (star[count].getY() > this.ClientSize.Height + star[count].getSize())
+					makeStar(count, 0);
+			}
+		}
+
+		private void DetectCollisions()
+		{
+			// check collisions between hero ship and power-ups
+			for (int countPowerUp = 0; countPowerUp < powerUp.Length; countPowerUp++)
+			{
+				if (CollisionDetection.SquareHitTriangle(powerUp[countPowerUp], ship))
+				{
+					switch (powerUp[countPowerUp].getType())
+					{
+						case 0:
+							if (!ship.wingman[0].isActive())
+							{
+								ship.wingman[0].setActive(true);
+								ship.wingman[0].setVisible(true);
+								ship.wingman[0].setTop(this.Height);
+							}
+							else if (!ship.wingman[1].isActive())
+							{
+								ship.wingman[1].setActive(true);
+								ship.wingman[1].setVisible(true);
+								ship.wingman[1].setTop(this.Height);
+							}
+							else
+								lives++;
+							break;
+
+						case 1:
+							for (int countLasers = 0 ; countLasers < ship.laser.Length; countLasers++)
+							{
+								if (ship.laser[countLasers].getSpeed() + 2 < 8)
+									ship.laser[countLasers].setSpeed(ship.laser[countLasers].getSpeed() +2);
+								else
+								{
+									ship.laser[countLasers].setSpeed(9);
+								}
+							}
+							score += 200;
+							break;
+
+						case 2:
+							for (int countLasers = 0 ; countLasers < ship.laser.Length; countLasers++)
+							{
+								if (ship.laser[countLasers].getHeight() + 2 <= 14)
+									ship.laser[countLasers].setHeight(ship.laser[countLasers].getHeight() +2);
+								else
+								{
+									ship.laser[countLasers].setHeight(15);
+								}
+							}
+
+							score += 200;
+							break;
+
+					}
+
+					powerUp[countPowerUp].setActive(false);
+					powerUp[countPowerUp].setVisible(false);
+				}
+			}
+			// check collisions with hero ship's lasers
+			for (int countLaser = 0; countLaser < ship.laser.Length; countLaser ++)
+			{
+				//lasers hitting enemy ships
+				for (int countShip = 0; countShip < enemy.Length; countShip++)
+					if (CollisionDetection.LaserHitSquare(ship.laser[countLaser], enemy[countShip]) && enemy[countShip].isActive())
+					{
+						enemy[countShip].setHitPoints(enemy[countShip].getHitPoints() -1);
+
+						ship.laser[countLaser].HitAnimation();
+
+						if (enemy[countShip].getHitPoints() <= 0)
+						{
+							enemy[countShip].setActive(false);
+							enemy[countShip].setVisible(false);
+							score += enemy[countShip].getPointValue();
+
+							// create power ups
+							if (rand.Next(1, 100) <= 15)
+							{
+								powerUp[countShip].setType(rand.Next(100)%3);
+								powerUp[countShip].setTop(enemy[countShip].getBottom());
+								powerUp[countShip].setLeft(enemy[countShip].getLeft());
+								powerUp[countShip].setActive(true);
+								powerUp[countShip].setVisible(true);
+							}
+						}
+
+					}
+				for (int countWingman = 0; countWingman < ship.wingman.Length; countWingman++)
+				{
+					for (int countShip = 0; countShip < enemy.Length; countShip++)
+						if (CollisionDetection.LaserHitSquare(ship.wingman[countWingman].laser[countLaser], enemy[countShip]) && enemy[countShip].isActive())
+						{
+							enemy[countShip].setHitPoints(enemy[countShip].getHitPoints() -1);
+
+							ship.wingman[countWingman].laser[countLaser].HitAnimation();
+
+							if (enemy[countShip].getHitPoints() == 0)
+							{
+
+								enemy[countShip].setActive(false);
+								enemy[countShip].setVisible(false);
+								score += enemy[countShip].getPointValue();
+
+								// create power ups
+								if (rand.Next(1, 100) <= 15)
+								{
+									powerUp[countShip].setType(rand.Next(0,2));
+									powerUp[countShip].setTop(enemy[countShip].getBottom());
+									powerUp[countShip].setLeft(enemy[countShip].getLeft());
+									powerUp[countShip].setActive(true);
+									powerUp[countShip].setVisible(true);
+								}
+							}
+						}
+				}
+			}
+
+				// check collisions with enemy ship's lasers
+			for (int countEnemy = 0; countEnemy < enemy.Length; countEnemy++) // for all enemy ships
+			{
+				for (int countLaser = 0; countLaser < enemy[countEnemy].laser.Length; countLaser++) // check all lasers
+				{
+					if (CollisionDetection.LaserHitPyramid(enemy[countEnemy].laser[countLaser], ship) && !PlayerHit_Timer.Enabled)
+					{
+						enemy[countEnemy].laser[countLaser].HitAnimation();
+						if (lives >= 0)
+						{ 
+							if (ship.wingman[1].isActive())
+							{
+								ship.wingman[1].setActive(false);
+								ship.wingman[1].setVisible(false);
+							}
+							else if (ship.wingman[0].isActive())
+							{
+								ship.wingman[0].setActive(false);
+								ship.wingman[0].setVisible(false);
+							}
+							else
+							lives--;
+							PlayerHit_Timer.Enabled = true;
+						}
+						else
+						{
+							ship.setActive(false);
+							ship.setVisible(false);
+							gameOver = true;
+							this.Cursor = Cursors.Default;
+						}
+					}
+					// check to see if lazer hit the wall
+					for (int countWall = 0; countWall < wall.Length; countWall++)
+					{
+						if (enemy[countEnemy].laser[countLaser].getMiddleX() == countWall &&  enemy[countEnemy].laser[countLaser].getBottom() >= wall[countWall])
+						{
+							enemy[countEnemy].laser[countLaser].HitAnimation(enemy[countEnemy].laser[countLaser].getMiddleX(), enemy[countEnemy].laser[countLaser].getMiddleY());
+							enemy[countEnemy].laser[countLaser].setActive(false);
+							for (int countBoom = countWall - enemy[countEnemy].laser[countLaser].getWidth() ; countBoom < countWall + enemy[countEnemy].laser[countLaser].getWidth(); countBoom++)
+							{
+								wall[countBoom] += enemy[countEnemy].laser[countLaser].getHeight()/2;
+
+							}
+						}
+
+					}
+				}
+			}
+			
+																							   
+		}
+
+		private void makeStar(int count)
+		{
+			star[count] = new Star(rand.Next(this.ClientSize.Width), rand.Next(this.ClientSize.Height), Color.Transparent, rand.Next(1,4), 0, rand.Next(20, 100));
+			int colorSwitch = rand.Next(0, 5);
+
+			switch (colorSwitch)
+			{
+				case 0:
+					star[count].setColor(Color.White); // white
+					break;
+				case 1:
+					star[count].setColor(Color.FromArgb(180, 180, 255)); // blue
+					break;
+				case 2:
+					star[count].setColor(Color.FromArgb(245, 195, 145)); //yellow
+					break;
+				case 3:
+					star[count].setColor(Color.FromArgb(185, 185, 185)); // light grey
+					break;
+				default:
+					star[count].setColor(Color.Transparent);
+					break;
+			}
+
+			if (level %3 == 2)
+				star[count].setSpeed();
+		}
+
+		private void mPauseOffScreen_Click(object sender, System.EventArgs e)
+		{
+			if (mPauseOffScreen.Checked)
+				mPauseOffScreen.Checked = false;
+			else
+				mPauseOffScreen.Checked = true;
+		}
+
+		private void Target_Timer_Tick(object sender, System.EventArgs e)
+		{
+			for (int count = 0; count < targetingCounter.Length; count++)
+			{
+				if (targetingCounter[count] > 0)
+					targetingCounter[count]--;
+				else 
+					targetingCounter[count] = 10;
+			}
+
+			if (paused) // if paused and mouse is in window, redraw screen to show ship movement
+			{
+				Invalidate();
+			}
+		}
+
+		/// <summary>
+		/// Method used to move stars from the bottom of the screen to the top of the screen.
+		/// This is stricktly to emulate space travel.  Will not be implimented in the 
+		/// "Space Defender" program, but is in place for the sequel "Space Avenger"
+		/// </summary>
+		/// <param name="count"></param>
+		/// <param name="Y"></param>
+		private void makeStar (int count, int Y)
+		{
+			makeStar(count);
+			star[count].setY(Y - star[count].getSize());
+		}
+
+		private void moveStar (int count)
+		{
+			if (star[count].getY() > this.Height)
+			{
+				makeStar (count, -2);
+				star[count].setSpeed();
+			}
+			else
+				star[count].setY(star[count].getY() + star[count].getSpeed());
+
+												
+		}
+
+		private void TestroundComplete ()
+		{
+			// assume round is over
+			roundComplete  = true;
+			// if an enemy exists make it false;
+			for (int count = 0 ; count < enemy.Length; count++)
+			{
+				if (enemy[count].isActive())
+				{					
+					roundComplete = false;
+				}
+				
+				for (int countLasers = 0; countLasers < enemy[count].laser.Length; countLasers ++)
+				{
+					if (enemy[count].laser[countLasers].isActive())
+						roundComplete = false;
+				}
+			}
+
+			for (int count = 0; count < powerUp.Length; count ++)
+			{
+				if (powerUp[count].isActive())
+					roundComplete = false;
+			}
+
+			if (roundComplete)
+			{
+				Sound.FlushAudio();
+				Sound.PlayAudioAsync("sounds\\engine.wav");
+				Sound.PlayAudioAsync("sounds\\engine2.wav");
+			}
+		
+		}
+
+		private void LevelEndAnimation()
+		{
+			if (ship.getBottom() > - 50)
+			{
+				targetY = -20;
+				ship.setTop(ship.getTop() - ship.getHeight());
+				ship.wingman[0].setTop(ship.wingman[0].getTop() - ship.getHeight());
+				ship.wingman[1].setTop(ship.wingman[1].getTop() - ship.getHeight());
+			
+				// Animate Lasers
+				ship.AnimateLasersUp(0);
+				for (int count = 0; count < ship.wingman.Length; count++)
+					ship.wingman[count].AnimateLasersUp(0);
+				for (int count = 0; count < enemy.Length; count++)
+					enemy[count].AnimateLasersDown(this.ClientSize.Height);
+			}
+			else
+				StartRound();
+		}
+
+		private void PlayerHit_Timer_Tick(object sender, System.EventArgs e)
+		{
+			flashCount++;
+			if (ship.isVisible())
+				ship.setVisible(false);
+			else
+				ship.setVisible(true);
+
+			if (flashCount > 20)
+			{
+				ship.setVisible(true);
+				PlayerHit_Timer.Enabled = false;
+				flashCount = 0;
+			}
+		}
+	}
+}
